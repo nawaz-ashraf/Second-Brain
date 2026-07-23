@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../../../../core/models/app_models.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -13,8 +14,9 @@ import '../../../../core/constants/app_constants.dart';
 /// Note editor screen with rich text editing, auto-save, pin, favorite, color
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
+  final String? collectionId;
 
-  const NoteEditorScreen({super.key, this.noteId});
+  const NoteEditorScreen({super.key, this.noteId, this.collectionId});
 
   @override
   ConsumerState<NoteEditorScreen> createState() => _NoteEditorScreenState();
@@ -83,20 +85,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
       if (note.contentJson != null && note.contentJson!.isNotEmpty) {
         try {
-          final doc = Document.fromJson(
-            (note.contentJson as dynamic) is String
-                ? (throw FormatException())
-                : note.contentJson as List,
-          );
+          final decoded = jsonDecode(note.contentJson!) as List;
+          final doc = Document.fromJson(decoded);
           _quillController.document = doc;
         } catch (_) {
           // If JSON parse fails, just set plain text
           final doc = Document();
-          if (note.contentPlain != null) {
+          if (note.contentPlain != null && note.contentPlain!.isNotEmpty) {
             doc.insert(0, note.contentPlain!);
           }
           _quillController.document = doc;
         }
+      } else if (note.contentPlain != null && note.contentPlain!.isNotEmpty) {
+        final doc = Document();
+        doc.insert(0, note.contentPlain!);
+        _quillController.document = doc;
       }
     }
 
@@ -127,6 +130,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final title = _titleController.text.trim();
     final doc = _quillController.document;
     final plainText = doc.toPlainText().trim();
+    final contentJsonStr = jsonEncode(doc.toDelta().toJson());
 
     // Don't save empty notes (unless they already exist)
     if (title.isEmpty && plainText.isEmpty && widget.noteId == null) return;
@@ -137,6 +141,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         await ref.read(notesRepositoryProvider).update(
           _existingNote!.copyWith(
             title: title.isEmpty ? 'Untitled' : title,
+            contentJson: contentJsonStr,
             contentPlain: plainText,
             color: _selectedColor,
             isPinned: _isPinned,
@@ -148,12 +153,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         // Create new note
         final note = await ref.read(notesRepositoryProvider).create(
           title: title.isEmpty ? 'Untitled' : title,
+          contentJson: contentJsonStr,
           contentPlain: plainText,
           color: _selectedColor,
           isPinned: _isPinned,
         );
         if (mounted) {
           _existingNote = note;
+        }
+        
+        // Link to collection if requested
+        if (widget.collectionId != null) {
+          await ref.read(collectionsRepositoryProvider).addItem(
+            widget.collectionId!,
+            note.id,
+            'note',
+          );
         }
       }
 

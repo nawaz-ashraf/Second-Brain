@@ -95,9 +95,10 @@ final appRouter = GoRouter(
       path: AppRoutes.noteEditor,
       pageBuilder: (context, state) {
         final noteId = state.uri.queryParameters['id'];
+        final collectionId = state.uri.queryParameters['collectionId'];
         return _slidePage(
           state,
-          NoteEditorScreen(noteId: noteId),
+          NoteEditorScreen(noteId: noteId, collectionId: collectionId),
         );
       },
     ),
@@ -137,10 +138,13 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.voice,
-      pageBuilder: (context, state) => _slidePage(
-        state,
-        const VoiceNotesScreen(),
-      ),
+      pageBuilder: (context, state) {
+        final collectionId = state.uri.queryParameters['collectionId'];
+        return _slidePage(
+          state,
+          VoiceNotesScreen(collectionId: collectionId),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.bookmarks,

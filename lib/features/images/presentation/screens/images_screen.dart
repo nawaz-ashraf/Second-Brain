@@ -13,6 +13,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
 import '../../../../shared/widgets/sort_filter_bar.dart';
+import '../../../../core/utils/item_creation_helper.dart';
 
 /// Images screen — import from gallery, capture from camera, view, manage
 class ImagesScreen extends ConsumerStatefulWidget {
@@ -24,40 +25,7 @@ class ImagesScreen extends ConsumerStatefulWidget {
 
 class _ImagesScreenState extends ConsumerState<ImagesScreen> {
   SortOrder _sortOrder = SortOrder.newest;
-  final _picker = ImagePicker();
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final images = await _picker.pickMultiImage(imageQuality: 90);
-      for (final image in images) {
-        await _saveImage(image.path, image.name);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _capturePhoto() async {
-    try {
-      final photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 90,
-      );
-      if (photo != null) {
-        await _saveImage(photo.path, photo.name);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture photo: $e')),
-        );
-      }
-    }
-  }
+  // _pickImage logic is now handled by ItemCreationHelper
 
   Future<void> _saveImage(String path, String name) async {
     final title = name.split('.').first;
@@ -85,18 +53,6 @@ final _imagesStreamProvider = StreamProvider.autoDispose<List<ImageModel>>((ref)
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(AppRoutes.home),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.photo_camera_outlined),
-            onPressed: _capturePhoto,
-            tooltip: 'Take Photo',
-          ),
-          IconButton(
-            icon: const Icon(Icons.photo_library_outlined),
-            onPressed: _pickFromGallery,
-            tooltip: 'Import from Gallery',
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -115,7 +71,7 @@ final _imagesStreamProvider = StreamProvider.autoDispose<List<ImageModel>>((ref)
                     title: 'No images yet',
                     subtitle: 'Import from gallery or capture with camera',
                     actionLabel: 'Import Images',
-                    onAction: _pickFromGallery,
+                    onAction: _showImportSheet,
                   );
                 }
 
@@ -140,31 +96,7 @@ final _imagesStreamProvider = StreamProvider.autoDispose<List<ImageModel>>((ref)
   }
 
   void _showImportSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library_rounded),
-            title: const Text('Import from Gallery'),
-            onTap: () {
-              Navigator.pop(ctx);
-              _pickFromGallery();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt_rounded),
-            title: const Text('Take Photo'),
-            onTap: () {
-              Navigator.pop(ctx);
-              _capturePhoto();
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
+    ItemCreationHelper.showImageImportSheet(context, ref);
   }
 
   Widget _buildGrid(List<ImageModel> images) {

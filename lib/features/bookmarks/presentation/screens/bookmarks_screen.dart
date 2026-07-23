@@ -14,6 +14,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
 import '../../../../shared/widgets/sort_filter_bar.dart';
+import '../../../../core/utils/item_creation_helper.dart';
 
 /// Bookmarks screen — save URLs, auto-fetch metadata, favorite, open in browser
 class BookmarksScreen extends ConsumerStatefulWidget {
@@ -26,126 +27,8 @@ class BookmarksScreen extends ConsumerStatefulWidget {
 class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
   SortOrder _sortOrder = SortOrder.newest;
 
-  Future<void> _showAddBookmarkSheet() async {
-    final urlController = TextEditingController();
-    final titleController = TextEditingController();
-    bool isFetchingMeta = false;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(AppTheme.spaceXL),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Save Bookmark',
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spaceLG),
-                TextField(
-                  controller: urlController,
-                  decoration: InputDecoration(
-                    hintText: 'https://...',
-                    labelText: 'URL',
-                    prefixIcon: const Icon(Icons.link_rounded),
-                    suffixIcon: isFetchingMeta
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.auto_awesome_rounded),
-                            onPressed: () async {
-                              final url = urlController.text.trim();
-                              if (url.isEmpty) return;
-                              setSheetState(() => isFetchingMeta = true);
-                              final meta = await _fetchUrlMeta(url);
-                              setSheetState(() {
-                                isFetchingMeta = false;
-                                if (meta != null && titleController.text.isEmpty) {
-                                  titleController.text = meta['title'] ?? '';
-                                }
-                              });
-                            },
-                            tooltip: 'Auto-fetch title',
-                          ),
-                  ),
-                  keyboardType: TextInputType.url,
-                ),
-                const SizedBox(height: AppTheme.spaceMD),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'Title (optional)',
-                    labelText: 'Title',
-                    prefixIcon: Icon(Icons.title_rounded),
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: AppTheme.spaceXL),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () async {
-                      final url = urlController.text.trim();
-                      if (url.isEmpty) return;
-                      final title = titleController.text.trim().isEmpty
-                          ? url
-                          : titleController.text.trim();
-                      await ref.read(bookmarksRepositoryProvider).create(
-                        title: title,
-                        url: url,
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bookmark saved')),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.bookmark_add_rounded),
-                    label: const Text('Save Bookmark'),
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spaceSM),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<Map<String, String?>?> _fetchUrlMeta(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      final response = await http
-          .get(uri, headers: {'User-Agent': 'SecondBrainApp/1.0'})
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final body = response.body;
-        final titleMatch = RegExp(r'<title>(.*?)</title>', caseSensitive: false)
-            .firstMatch(body);
-        final title = titleMatch?.group(1)?.trim();
-        return {'title': title};
-      }
-    } catch (_) {}
-    return null;
+  void _showAddBookmarkSheet() {
+    ItemCreationHelper.showAddBookmarkSheet(context, ref);
   }
 
 final _bookmarksStreamProvider = StreamProvider.autoDispose<List<BookmarkModel>>((ref) {

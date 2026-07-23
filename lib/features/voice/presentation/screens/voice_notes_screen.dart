@@ -17,7 +17,9 @@ import '../../../../shared/widgets/loading_state.dart';
 
 /// Voice notes screen — record, playback, list, and manage recordings
 class VoiceNotesScreen extends ConsumerStatefulWidget {
-  const VoiceNotesScreen({super.key});
+  final String? collectionId;
+
+  const VoiceNotesScreen({super.key, this.collectionId});
 
   @override
   ConsumerState<VoiceNotesScreen> createState() => _VoiceNotesScreenState();
@@ -82,11 +84,19 @@ class _VoiceNotesScreenState extends ConsumerState<VoiceNotesScreen> {
       final now = DateTime.now();
       final name = title ?? DateFormat('Recording MMM d, yyyy HH:mm').format(now);
 
-      await ref.read(voiceNotesRepositoryProvider).create(
+      final voiceNote = await ref.read(voiceNotesRepositoryProvider).create(
         title: name,
         filePath: path,
         durationMs: _recordingDuration.inMilliseconds,
       );
+
+      if (widget.collectionId != null) {
+        await ref.read(collectionsRepositoryProvider).addItem(
+          widget.collectionId!,
+          voiceNote.id,
+          'voice_note',
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

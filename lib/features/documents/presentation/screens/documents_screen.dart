@@ -15,6 +15,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../../shared/widgets/sort_filter_bar.dart';
+import '../../../../core/utils/item_creation_helper.dart';
 
 /// Documents feature screen — import, view, favorite, and manage documents
 class DocumentsScreen extends ConsumerStatefulWidget {
@@ -31,55 +32,8 @@ final _documentsStreamProvider = StreamProvider.autoDispose<List<DocumentModel>>
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   SortOrder _sortOrder = SortOrder.newest;
 
-  Future<void> _importDocument() async {
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: AppConstants.supportedDocTypes,
-        allowMultiple: false,
-      );
-
-      if (result == null || result.files.isEmpty) return;
-
-      final file = result.files.first;
-      if (file.path == null) return;
-
-      final ext = file.extension?.toLowerCase() ?? 'txt';
-      final fileName = file.name;
-      final fileSize = file.size;
-
-      // Copy file to app documents directory
-      final appDir = await _getAppDocumentsDir();
-      final destPath = '$appDir/$fileName';
-      await File(file.path!).copy(destPath);
-
-      await ref.read(documentsRepositoryProvider).create(
-        title: fileName.replaceAll('.$ext', ''),
-        filePath: destPath,
-        fileName: fileName,
-        fileType: ext,
-        fileSize: fileSize,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document imported successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import: $e')),
-        );
-      }
-    }
-  }
-
-  Future<String> _getAppDocumentsDir() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final dir = Directory('${appDir.path}/documents');
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir.path;
+  void _importDocument() {
+    ItemCreationHelper.importDocument(context, ref);
   }
 
   @override

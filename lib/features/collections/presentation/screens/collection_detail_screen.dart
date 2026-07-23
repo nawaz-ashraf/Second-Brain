@@ -4,11 +4,42 @@ import '../../../../core/models/app_models.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_state.dart';
+import '../widgets/collection_action_sheet.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/routes/app_router.dart';
 
 /// Collection detail screen showing all items in a collection
 final _collectionFutureProvider = FutureProvider.family.autoDispose<CollectionModel?, String>((ref, id) {
   return ref.watch(collectionsRepositoryProvider).getById(id);
+});
+
+final _collectionItemsStreamProvider = StreamProvider.family.autoDispose<List<dynamic>, String>((ref, id) async* {
+  final stream = ref.watch(collectionsRepositoryProvider).watchItems(id);
+  await for (final items in stream) {
+    final result = <dynamic>[];
+    for (final item in items) {
+       if (item.itemType == 'note') {
+         final n = await ref.read(notesRepositoryProvider).getById(item.itemId);
+         if (n != null) result.add(n);
+       } else if (item.itemType == 'bookmark') {
+         final b = await ref.read(bookmarksRepositoryProvider).getById(item.itemId);
+         if (b != null) result.add(b);
+       } else if (item.itemType == 'document') {
+         final d = await ref.read(documentsRepositoryProvider).getById(item.itemId);
+         if (d != null) result.add(d);
+       } else if (item.itemType == 'image') {
+         final img = await ref.read(imagesRepositoryProvider).getById(item.itemId);
+         if (img != null) result.add(img);
+       } else if (item.itemType == 'voice') {
+         final v = await ref.read(voiceNotesRepositoryProvider).getById(item.itemId);
+         if (v != null) result.add(v);
+       }
+    }
+    // sort newest first
+    result.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    yield result;
+  }
 });
 
 class CollectionDetailScreen extends ConsumerWidget {
@@ -92,15 +123,110 @@ class CollectionDetailScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Items list (placeholder — full implementation streams items)
-              const Expanded(
-                child: EmptyState(
-                  icon: Icons.add_rounded,
-                  title: 'No items yet',
-                  subtitle: 'Add items to this collection from any content screen',
+              // Items list
+              Expanded(
+                child: ref.watch(_collectionItemsStreamProvider(collection.id)).when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.add_rounded,
+                        title: 'No items yet',
+                        subtitle: 'Tap the + button below to add an item to this collection.',
+                      );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        final item = items[i];
+                        IconData icon;
+                        String title;
+                        String subtitle;
+                        String route;
+
+                        if (item is NoteModel) {
+                          icon = Icons.edit_note_rounded;
+                          title = item.title;
+                          subtitle = DateFormat('MMM d, yyyy').format(item.updatedAt);
+                          route = '${AppRoutes.noteEditor}?id=${item.id}';
+                        } else if (item is BookmarkModel) {
+                          icon = Icons.bookmark_rounded;
+                          title = item.title;
+                          subtitle = item.url;
+                          route = AppRoutes.bookmarks;
+                        } else if (item is DocumentModel) {
+                          icon = Icons.description_rounded;
+                          title = item.title;
+                          subtitle = '${(item.fileSize / 1024 / 1024).toStringAsFixed(1)} MB';
+                          route = '${AppRoutes.documentViewer}?id=${item.id}';
+                        } else if (item is ImageModel) {
+                          icon = Icons.image_rounded;
+                          title = item.title;
+                          subtitle = item.width != null && item.height != null 
+                              ? '${item.width}x${item.height}'
+                              : 'Image';
+                          route = '${AppRoutes.imageViewer}?id=${item.id}';
+                        } else if (item is VoiceNoteModel) {
+                          icon = Icons.mic_rounded;
+                          title = item.title;
+                          subtitle = item.durationDisplay;
+                          route = AppRoutes.voice;
+                        } else {
+                          return const SizedBox.shrink();
+                        }
+
+                        return ListTile(
+                          onTap: () => context.push(route),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          leading: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                              borderRadius: AppTheme.radiusMedium,
+                            ),
+                            child: Icon(icon, color: theme.colorScheme.primary),
+                          ),
+                          title: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
                 ),
               ),
             ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (ctx) => CollectionActionSheet(
+                  collectionId: collection.id,
+                  parentContext: context,
+                  parentRef: ref,
+                ),
+              );
+            },
+            child: const Icon(Icons.add_rounded),
           ),
         );
       },
