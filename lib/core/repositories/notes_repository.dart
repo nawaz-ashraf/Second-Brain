@@ -23,9 +23,11 @@ abstract class NotesRepository {
   Future<void> update(NoteModel note, {List<String>? tagIds});
   Future<void> delete(String id);
   Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<void> togglePin(String id, bool isPinned);
   Future<List<NoteModel>> search(String query);
+  Stream<List<NoteModel>> watchDeleted();
 }
 
 class NotesRepositoryImpl implements NotesRepository {
@@ -144,6 +146,21 @@ class NotesRepositoryImpl implements NotesRepository {
 
   @override
   Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteNote(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreNote(id);
+
+  @override
+  Stream<List<NoteModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((notes) async {
+      final result = <NoteModel>[];
+      for (final note in notes) {
+        final tags = await _dao.getTagsForNote(note.id);
+        result.add(note.toModel(tags: tags.map((t) => t.toModel()).toList()));
+      }
+      return result;
+    });
+  }
 
   @override
   Future<void> toggleFavorite(String id, bool isFavorite) =>

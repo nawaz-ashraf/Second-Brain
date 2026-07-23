@@ -772,6 +772,17 @@ class $DocumentsTable extends Documents
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -783,6 +794,7 @@ class $DocumentsTable extends Documents
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -863,6 +875,12 @@ class $DocumentsTable extends Documents
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -908,6 +926,10 @@ class $DocumentsTable extends Documents
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -927,6 +949,7 @@ class Document extends DataClass implements Insertable<Document> {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   const Document({
     required this.id,
     required this.title,
@@ -937,6 +960,7 @@ class Document extends DataClass implements Insertable<Document> {
     required this.isFavorite,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -950,6 +974,9 @@ class Document extends DataClass implements Insertable<Document> {
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -964,6 +991,9 @@ class Document extends DataClass implements Insertable<Document> {
       isFavorite: Value(isFavorite),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -982,6 +1012,7 @@ class Document extends DataClass implements Insertable<Document> {
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -997,6 +1028,7 @@ class Document extends DataClass implements Insertable<Document> {
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -1010,6 +1042,7 @@ class Document extends DataClass implements Insertable<Document> {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Document(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1020,6 +1053,7 @@ class Document extends DataClass implements Insertable<Document> {
     isFavorite: isFavorite ?? this.isFavorite,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Document copyWithCompanion(DocumentsCompanion data) {
     return Document(
@@ -1034,6 +1068,7 @@ class Document extends DataClass implements Insertable<Document> {
           : this.isFavorite,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -1048,7 +1083,8 @@ class Document extends DataClass implements Insertable<Document> {
           ..write('fileSize: $fileSize, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1064,6 +1100,7 @@ class Document extends DataClass implements Insertable<Document> {
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1077,7 +1114,8 @@ class Document extends DataClass implements Insertable<Document> {
           other.fileSize == this.fileSize &&
           other.isFavorite == this.isFavorite &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class DocumentsCompanion extends UpdateCompanion<Document> {
@@ -1090,6 +1128,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
   final Value<bool> isFavorite;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const DocumentsCompanion({
     this.id = const Value.absent(),
@@ -1101,6 +1140,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.isFavorite = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DocumentsCompanion.insert({
@@ -1113,6 +1153,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.isFavorite = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -1132,6 +1173,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Expression<bool>? isFavorite,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1144,6 +1186,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1158,6 +1201,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Value<bool>? isFavorite,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return DocumentsCompanion(
@@ -1170,6 +1214,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1204,6 +1249,9 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1222,6 +1270,7 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1328,6 +1377,17 @@ class $ImagesTable extends Images with TableInfo<$ImagesTable, Image> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1339,6 +1399,7 @@ class $ImagesTable extends Images with TableInfo<$ImagesTable, Image> {
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1416,6 +1477,12 @@ class $ImagesTable extends Images with TableInfo<$ImagesTable, Image> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1461,6 +1528,10 @@ class $ImagesTable extends Images with TableInfo<$ImagesTable, Image> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -1480,6 +1551,7 @@ class Image extends DataClass implements Insertable<Image> {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   const Image({
     required this.id,
     required this.title,
@@ -1490,6 +1562,7 @@ class Image extends DataClass implements Insertable<Image> {
     required this.isFavorite,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1509,6 +1582,9 @@ class Image extends DataClass implements Insertable<Image> {
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -1529,6 +1605,9 @@ class Image extends DataClass implements Insertable<Image> {
       isFavorite: Value(isFavorite),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -1547,6 +1626,7 @@ class Image extends DataClass implements Insertable<Image> {
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -1562,6 +1642,7 @@ class Image extends DataClass implements Insertable<Image> {
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -1575,6 +1656,7 @@ class Image extends DataClass implements Insertable<Image> {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Image(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1587,6 +1669,7 @@ class Image extends DataClass implements Insertable<Image> {
     isFavorite: isFavorite ?? this.isFavorite,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Image copyWithCompanion(ImagesCompanion data) {
     return Image(
@@ -1603,6 +1686,7 @@ class Image extends DataClass implements Insertable<Image> {
           : this.isFavorite,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -1617,7 +1701,8 @@ class Image extends DataClass implements Insertable<Image> {
           ..write('height: $height, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1633,6 +1718,7 @@ class Image extends DataClass implements Insertable<Image> {
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1646,7 +1732,8 @@ class Image extends DataClass implements Insertable<Image> {
           other.height == this.height &&
           other.isFavorite == this.isFavorite &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class ImagesCompanion extends UpdateCompanion<Image> {
@@ -1659,6 +1746,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
   final Value<bool> isFavorite;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const ImagesCompanion({
     this.id = const Value.absent(),
@@ -1670,6 +1758,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
     this.isFavorite = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ImagesCompanion.insert({
@@ -1682,6 +1771,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
     this.isFavorite = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -1698,6 +1788,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
     Expression<bool>? isFavorite,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1710,6 +1801,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1724,6 +1816,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
     Value<bool>? isFavorite,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return ImagesCompanion(
@@ -1736,6 +1829,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1770,6 +1864,9 @@ class ImagesCompanion extends UpdateCompanion<Image> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1788,6 +1885,7 @@ class ImagesCompanion extends UpdateCompanion<Image> {
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1878,6 +1976,17 @@ class $VoiceNotesTable extends VoiceNotes
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1887,6 +1996,7 @@ class $VoiceNotesTable extends VoiceNotes
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1949,6 +2059,12 @@ class $VoiceNotesTable extends VoiceNotes
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1986,6 +2102,10 @@ class $VoiceNotesTable extends VoiceNotes
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -2003,6 +2123,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   const VoiceNote({
     required this.id,
     required this.title,
@@ -2011,6 +2132,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
     required this.isFavorite,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2022,6 +2144,9 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -2034,6 +2159,9 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
       isFavorite: Value(isFavorite),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -2050,6 +2178,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -2063,6 +2192,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -2074,6 +2204,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => VoiceNote(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -2082,6 +2213,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
     isFavorite: isFavorite ?? this.isFavorite,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   VoiceNote copyWithCompanion(VoiceNotesCompanion data) {
     return VoiceNote(
@@ -2096,6 +2228,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
           : this.isFavorite,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -2108,7 +2241,8 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
           ..write('durationMs: $durationMs, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -2122,6 +2256,7 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2133,7 +2268,8 @@ class VoiceNote extends DataClass implements Insertable<VoiceNote> {
           other.durationMs == this.durationMs &&
           other.isFavorite == this.isFavorite &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
@@ -2144,6 +2280,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
   final Value<bool> isFavorite;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const VoiceNotesCompanion({
     this.id = const Value.absent(),
@@ -2153,6 +2290,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
     this.isFavorite = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   VoiceNotesCompanion.insert({
@@ -2163,6 +2301,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
     this.isFavorite = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -2177,6 +2316,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
     Expression<bool>? isFavorite,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2187,6 +2327,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2199,6 +2340,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
     Value<bool>? isFavorite,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return VoiceNotesCompanion(
@@ -2209,6 +2351,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2237,6 +2380,9 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2253,6 +2399,7 @@ class VoiceNotesCompanion extends UpdateCompanion<VoiceNote> {
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2362,6 +2509,17 @@ class $BookmarksTable extends Bookmarks
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2373,6 +2531,7 @@ class $BookmarksTable extends Bookmarks
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2450,6 +2609,12 @@ class $BookmarksTable extends Bookmarks
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -2495,6 +2660,10 @@ class $BookmarksTable extends Bookmarks
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -2514,6 +2683,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   const Bookmark({
     required this.id,
     required this.title,
@@ -2524,6 +2694,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     required this.isFavorite,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2543,6 +2714,9 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -2563,6 +2737,9 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       isFavorite: Value(isFavorite),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -2581,6 +2758,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -2596,6 +2774,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -2609,6 +2788,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Bookmark(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -2619,6 +2799,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     isFavorite: isFavorite ?? this.isFavorite,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Bookmark copyWithCompanion(BookmarksCompanion data) {
     return Bookmark(
@@ -2637,6 +2818,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           : this.isFavorite,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -2651,7 +2833,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           ..write('faviconUrl: $faviconUrl, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -2667,6 +2850,7 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
     isFavorite,
     createdAt,
     updatedAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2680,7 +2864,8 @@ class Bookmark extends DataClass implements Insertable<Bookmark> {
           other.faviconUrl == this.faviconUrl &&
           other.isFavorite == this.isFavorite &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class BookmarksCompanion extends UpdateCompanion<Bookmark> {
@@ -2693,6 +2878,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
   final Value<bool> isFavorite;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const BookmarksCompanion({
     this.id = const Value.absent(),
@@ -2704,6 +2890,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     this.isFavorite = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   BookmarksCompanion.insert({
@@ -2716,6 +2903,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     this.isFavorite = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -2732,6 +2920,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     Expression<bool>? isFavorite,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2744,6 +2933,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2758,6 +2948,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     Value<bool>? isFavorite,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return BookmarksCompanion(
@@ -2770,6 +2961,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2804,6 +2996,9 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2822,6 +3017,7 @@ class BookmarksCompanion extends UpdateCompanion<Bookmark> {
           ..write('isFavorite: $isFavorite, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2905,6 +3101,17 @@ class $CollectionsTable extends Collections
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2914,6 +3121,7 @@ class $CollectionsTable extends Collections
     icon,
     createdAt,
     updatedAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2977,6 +3185,12 @@ class $CollectionsTable extends Collections
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -3014,6 +3228,10 @@ class $CollectionsTable extends Collections
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -3031,6 +3249,7 @@ class Collection extends DataClass implements Insertable<Collection> {
   final String icon;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   const Collection({
     required this.id,
     required this.name,
@@ -3039,6 +3258,7 @@ class Collection extends DataClass implements Insertable<Collection> {
     required this.icon,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3052,6 +3272,9 @@ class Collection extends DataClass implements Insertable<Collection> {
     map['icon'] = Variable<String>(icon);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -3066,6 +3289,9 @@ class Collection extends DataClass implements Insertable<Collection> {
       icon: Value(icon),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -3082,6 +3308,7 @@ class Collection extends DataClass implements Insertable<Collection> {
       icon: serializer.fromJson<String>(json['icon']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -3095,6 +3322,7 @@ class Collection extends DataClass implements Insertable<Collection> {
       'icon': serializer.toJson<String>(icon),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -3106,6 +3334,7 @@ class Collection extends DataClass implements Insertable<Collection> {
     String? icon,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Collection(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -3114,6 +3343,7 @@ class Collection extends DataClass implements Insertable<Collection> {
     icon: icon ?? this.icon,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Collection copyWithCompanion(CollectionsCompanion data) {
     return Collection(
@@ -3126,6 +3356,7 @@ class Collection extends DataClass implements Insertable<Collection> {
       icon: data.icon.present ? data.icon.value : this.icon,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -3138,14 +3369,23 @@ class Collection extends DataClass implements Insertable<Collection> {
           ..write('color: $color, ')
           ..write('icon: $icon, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, description, color, icon, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    description,
+    color,
+    icon,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3156,7 +3396,8 @@ class Collection extends DataClass implements Insertable<Collection> {
           other.color == this.color &&
           other.icon == this.icon &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class CollectionsCompanion extends UpdateCompanion<Collection> {
@@ -3167,6 +3408,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
   final Value<String> icon;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
   final Value<int> rowid;
   const CollectionsCompanion({
     this.id = const Value.absent(),
@@ -3176,6 +3418,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
     this.icon = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CollectionsCompanion.insert({
@@ -3186,6 +3429,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
     this.icon = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -3199,6 +3443,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
     Expression<String>? icon,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3209,6 +3454,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
       if (icon != null) 'icon': icon,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3221,6 +3467,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
     Value<String>? icon,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
     Value<int>? rowid,
   }) {
     return CollectionsCompanion(
@@ -3231,6 +3478,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
       icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3259,6 +3507,9 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3275,6 +3526,7 @@ class CollectionsCompanion extends UpdateCompanion<Collection> {
           ..write('icon: $icon, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5740,6 +5992,7 @@ typedef $$DocumentsTableCreateCompanionBuilder =
       Value<bool> isFavorite,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$DocumentsTableUpdateCompanionBuilder =
@@ -5753,6 +6006,7 @@ typedef $$DocumentsTableUpdateCompanionBuilder =
       Value<bool> isFavorite,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -5836,6 +6090,11 @@ class $$DocumentsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> documentTagsRefs(
     Expression<bool> Function($$DocumentTagsTableFilterComposer f) f,
   ) {
@@ -5915,6 +6174,11 @@ class $$DocumentsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DocumentsTableAnnotationComposer
@@ -5954,6 +6218,9 @@ class $$DocumentsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> documentTagsRefs<T extends Object>(
     Expression<T> Function($$DocumentTagsTableAnnotationComposer a) f,
@@ -6018,6 +6285,7 @@ class $$DocumentsTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion(
                 id: id,
@@ -6029,6 +6297,7 @@ class $$DocumentsTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6042,6 +6311,7 @@ class $$DocumentsTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion.insert(
                 id: id,
@@ -6053,6 +6323,7 @@ class $$DocumentsTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6122,6 +6393,7 @@ typedef $$ImagesTableCreateCompanionBuilder =
       Value<bool> isFavorite,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$ImagesTableUpdateCompanionBuilder =
@@ -6135,6 +6407,7 @@ typedef $$ImagesTableUpdateCompanionBuilder =
       Value<bool> isFavorite,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -6212,6 +6485,11 @@ class $$ImagesTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6294,6 +6572,11 @@ class $$ImagesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ImagesTableAnnotationComposer
@@ -6335,6 +6618,9 @@ class $$ImagesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> imageTagsRefs<T extends Object>(
     Expression<T> Function($$ImageTagsTableAnnotationComposer a) f,
@@ -6399,6 +6685,7 @@ class $$ImagesTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ImagesCompanion(
                 id: id,
@@ -6410,6 +6697,7 @@ class $$ImagesTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6423,6 +6711,7 @@ class $$ImagesTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ImagesCompanion.insert(
                 id: id,
@@ -6434,6 +6723,7 @@ class $$ImagesTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6491,6 +6781,7 @@ typedef $$VoiceNotesTableCreateCompanionBuilder =
       Value<bool> isFavorite,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$VoiceNotesTableUpdateCompanionBuilder =
@@ -6502,6 +6793,7 @@ typedef $$VoiceNotesTableUpdateCompanionBuilder =
       Value<bool> isFavorite,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -6575,6 +6867,11 @@ class $$VoiceNotesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> voiceNoteTagsRefs(
     Expression<bool> Function($$VoiceNoteTagsTableFilterComposer f) f,
   ) {
@@ -6644,6 +6941,11 @@ class $$VoiceNotesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$VoiceNotesTableAnnotationComposer
@@ -6679,6 +6981,9 @@ class $$VoiceNotesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> voiceNoteTagsRefs<T extends Object>(
     Expression<T> Function($$VoiceNoteTagsTableAnnotationComposer a) f,
@@ -6741,6 +7046,7 @@ class $$VoiceNotesTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VoiceNotesCompanion(
                 id: id,
@@ -6750,6 +7056,7 @@ class $$VoiceNotesTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6761,6 +7068,7 @@ class $$VoiceNotesTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => VoiceNotesCompanion.insert(
                 id: id,
@@ -6770,6 +7078,7 @@ class $$VoiceNotesTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6843,6 +7152,7 @@ typedef $$BookmarksTableCreateCompanionBuilder =
       Value<bool> isFavorite,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$BookmarksTableUpdateCompanionBuilder =
@@ -6856,6 +7166,7 @@ typedef $$BookmarksTableUpdateCompanionBuilder =
       Value<bool> isFavorite,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -6939,6 +7250,11 @@ class $$BookmarksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> bookmarkTagsRefs(
     Expression<bool> Function($$BookmarkTagsTableFilterComposer f) f,
   ) {
@@ -7018,6 +7334,11 @@ class $$BookmarksTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$BookmarksTableAnnotationComposer
@@ -7061,6 +7382,9 @@ class $$BookmarksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> bookmarkTagsRefs<T extends Object>(
     Expression<T> Function($$BookmarkTagsTableAnnotationComposer a) f,
@@ -7125,6 +7449,7 @@ class $$BookmarksTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BookmarksCompanion(
                 id: id,
@@ -7136,6 +7461,7 @@ class $$BookmarksTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7149,6 +7475,7 @@ class $$BookmarksTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BookmarksCompanion.insert(
                 id: id,
@@ -7160,6 +7487,7 @@ class $$BookmarksTableTableManager
                 isFavorite: isFavorite,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -7227,6 +7555,7 @@ typedef $$CollectionsTableCreateCompanionBuilder =
       Value<String> icon,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 typedef $$CollectionsTableUpdateCompanionBuilder =
@@ -7238,6 +7567,7 @@ typedef $$CollectionsTableUpdateCompanionBuilder =
       Value<String> icon,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
       Value<int> rowid,
     });
 
@@ -7313,6 +7643,11 @@ class $$CollectionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> collectionItemsRefs(
     Expression<bool> Function($$CollectionItemsTableFilterComposer f) f,
   ) {
@@ -7382,6 +7717,11 @@ class $$CollectionsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CollectionsTableAnnotationComposer
@@ -7415,6 +7755,9 @@ class $$CollectionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> collectionItemsRefs<T extends Object>(
     Expression<T> Function($$CollectionItemsTableAnnotationComposer a) f,
@@ -7477,6 +7820,7 @@ class $$CollectionsTableTableManager
                 Value<String> icon = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CollectionsCompanion(
                 id: id,
@@ -7486,6 +7830,7 @@ class $$CollectionsTableTableManager
                 icon: icon,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7497,6 +7842,7 @@ class $$CollectionsTableTableManager
                 Value<String> icon = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CollectionsCompanion.insert(
                 id: id,
@@ -7506,6 +7852,7 @@ class $$CollectionsTableTableManager
                 icon: icon,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

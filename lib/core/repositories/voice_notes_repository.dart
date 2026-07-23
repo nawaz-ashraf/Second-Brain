@@ -18,8 +18,11 @@ abstract class VoiceNotesRepository {
   });
   Future<void> update(VoiceNoteModel voiceNote);
   Future<void> delete(String id);
+  Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<List<VoiceNoteModel>> search(String query);
+  Stream<List<VoiceNoteModel>> watchDeleted();
 }
 
 class VoiceNotesRepositoryImpl implements VoiceNotesRepository {
@@ -101,6 +104,19 @@ class VoiceNotesRepositoryImpl implements VoiceNotesRepository {
 
   @override
   Future<void> delete(String id) => _dao.deleteVoiceNote(id);
+
+  @override
+  Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteVoiceNote(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreVoiceNote(id);
+
+  @override
+  Stream<List<VoiceNoteModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((vns) async {
+      return vns.map((v) => v.toModel()).toList();
+    });
+  }
 
   @override
   Future<void> toggleFavorite(String id, bool isFavorite) =>

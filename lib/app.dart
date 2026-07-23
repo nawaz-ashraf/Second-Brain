@@ -6,6 +6,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/providers/core_providers.dart';
+import 'features/settings/presentation/widgets/app_lock_wrapper.dart';
 
 /// Root application widget
 class SecondBrainApp extends ConsumerWidget {
@@ -59,7 +60,7 @@ class SecondBrainApp extends ConsumerWidget {
           DeviceOrientation.landscapeRight,
         ]);
 
-        return child ?? const SizedBox.shrink();
+        return AppLockWrapper(child: child ?? const SizedBox.shrink());
       },
     );
   }

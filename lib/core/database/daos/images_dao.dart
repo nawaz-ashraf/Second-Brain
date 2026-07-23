@@ -10,13 +10,14 @@ class ImagesDao extends DatabaseAccessor<AppDatabase> with _$ImagesDaoMixin {
 
   Stream<List<Image>> watchAll() {
     return (select(images)
+          ..where((i) => i.deletedAt.isNull())
           ..orderBy([(i) => OrderingTerm.desc(i.updatedAt)]))
         .watch();
   }
 
   Stream<List<Image>> watchFavorites() {
     return (select(images)
-          ..where((i) => i.isFavorite.equals(true))
+          ..where((i) => i.isFavorite.equals(true) & i.deletedAt.isNull())
           ..orderBy([(i) => OrderingTerm.desc(i.updatedAt)]))
         .watch();
   }
@@ -28,7 +29,7 @@ class ImagesDao extends DatabaseAccessor<AppDatabase> with _$ImagesDaoMixin {
   Future<List<Image>> search(String query) {
     final q = '%$query%';
     return (select(images)
-          ..where((i) => i.title.like(q))
+          ..where((i) => i.title.like(q) & i.deletedAt.isNull())
           ..orderBy([(i) => OrderingTerm.desc(i.updatedAt)]))
         .get();
   }
@@ -42,7 +43,26 @@ class ImagesDao extends DatabaseAccessor<AppDatabase> with _$ImagesDaoMixin {
   }
 
   Future<void> deleteImage(String id) async {
+    await (update(images)..where((i) => i.id.equals(id))).write(
+      ImagesCompanion(deletedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> permanentlyDeleteImage(String id) async {
     await (delete(images)..where((i) => i.id.equals(id))).go();
+  }
+
+  Future<void> restoreImage(String id) async {
+    await (update(images)..where((i) => i.id.equals(id))).write(
+      const ImagesCompanion(deletedAt: Value(null)),
+    );
+  }
+
+  Stream<List<Image>> watchDeleted() {
+    return (select(images)
+          ..where((i) => i.deletedAt.isNotNull())
+          ..orderBy([(i) => OrderingTerm.desc(i.deletedAt)]))
+        .watch();
   }
 
   Future<void> toggleFavorite(String id, bool isFavorite) async {

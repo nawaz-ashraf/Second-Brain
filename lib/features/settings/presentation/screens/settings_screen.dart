@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_constants.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/providers/core_providers.dart';
+import '../../../../core/routes/app_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'pin_lock_screen.dart';
 
 /// Settings screen with theme, storage info, and app meta
 class SettingsScreen extends ConsumerWidget {
@@ -23,6 +25,64 @@ class SettingsScreen extends ConsumerWidget {
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
+          // ─── Security ──────────────────────────────────────────────────────
+          _SectionHeader(label: 'Security'),
+          _SettingsCard(
+            children: [
+              Consumer(
+                builder: (context, ref, child) {
+                  final lockService = ref.watch(appLockServiceProvider);
+                  final isEnabled = lockService.isEnabled;
+                  return SwitchListTile(
+                    secondary: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: AppTheme.radiusMedium,
+                      ),
+                      child: const Icon(Icons.lock_rounded, color: Colors.green, size: 20),
+                    ),
+                    title: const Text('App Lock (PIN)'),
+                    subtitle: Text(isEnabled ? 'Enabled' : 'Disabled'),
+                    value: isEnabled,
+                    onChanged: (value) async {
+                      if (value) {
+                        // Show PIN setup screen
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PinLockScreen(
+                              isSettingPin: true,
+                              onUnlock: () {
+                                Navigator.pop(context);
+                                // trigger rebuild to update switch state
+                                ref.invalidate(appLockServiceProvider);
+                              },
+                            ),
+                          ),
+                        );
+                      } else {
+                        // Require PIN to disable
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PinLockScreen(
+                              onUnlock: () async {
+                                await lockService.disableLock();
+                                if (context.mounted) Navigator.pop(context);
+                                ref.invalidate(appLockServiceProvider);
+                              },
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: AppTheme.spaceLG),
           // ─── Appearance ──────────────────────────────────────────────────
           _SectionHeader(label: 'Appearance'),
           _SettingsCard(
@@ -130,6 +190,24 @@ class SettingsScreen extends ConsumerWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: AppTheme.radiusMedium,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.orange, size: 20),
+                ),
+                title: const Text('Recently Deleted'),
+                subtitle: const Text('View and restore deleted items'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: () {
+                  context.push(AppRoutes.trash);
+                },
+              ),
+              const Divider(height: 1, indent: 60),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
                     borderRadius: AppTheme.radiusMedium,
                   ),
@@ -147,6 +225,50 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          const SizedBox(height: AppTheme.spaceLG),
+
+          // ─── Legal ────────────────────────────────────────────────────────
+          _SectionHeader(label: 'Legal'),
+          _SettingsCard(
+            children: [
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.withOpacity(0.1),
+                    borderRadius: AppTheme.radiusMedium,
+                  ),
+                  child: const Icon(Icons.privacy_tip_rounded, color: Colors.blueGrey, size: 20),
+                ),
+                title: const Text('Privacy Policy'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: () {
+                  context.push(AppRoutes.privacyPolicy);
+                },
+              ),
+              const Divider(height: 1, indent: 60),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withOpacity(0.1),
+                    borderRadius: AppTheme.radiusMedium,
+                  ),
+                  child: const Icon(Icons.description_rounded, color: Colors.indigo, size: 20),
+                ),
+                title: const Text('Terms of Service'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: () {
+                  context.push(AppRoutes.termsOfService);
+                },
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: AppTheme.spaceLG),
 
         ],
       ),

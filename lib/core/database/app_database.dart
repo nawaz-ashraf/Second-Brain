@@ -50,7 +50,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -58,7 +58,14 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
-      // Future migrations will go here
+      if (from < 2) {
+        // Add deletedAt column to all tables that didn't have it
+        await m.addColumn(documents, documents.deletedAt);
+        await m.addColumn(images, images.deletedAt);
+        await m.addColumn(voiceNotes, voiceNotes.deletedAt);
+        await m.addColumn(bookmarks, bookmarks.deletedAt);
+        await m.addColumn(collections, collections.deletedAt);
+      }
     },
     beforeOpen: (details) async {
       // Enable foreign keys

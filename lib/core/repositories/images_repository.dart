@@ -20,8 +20,11 @@ abstract class ImagesRepository {
   });
   Future<void> update(ImageModel image);
   Future<void> delete(String id);
+  Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<List<ImageModel>> search(String query);
+  Stream<List<ImageModel>> watchDeleted();
 }
 
 class ImagesRepositoryImpl implements ImagesRepository {
@@ -109,6 +112,19 @@ class ImagesRepositoryImpl implements ImagesRepository {
 
   @override
   Future<void> delete(String id) => _dao.deleteImage(id);
+
+  @override
+  Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteImage(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreImage(id);
+
+  @override
+  Stream<List<ImageModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((images) async {
+      return images.map((i) => i.toModel()).toList();
+    });
+  }
 
   @override
   Future<void> toggleFavorite(String id, bool isFavorite) =>

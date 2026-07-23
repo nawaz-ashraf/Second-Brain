@@ -57,6 +57,14 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
         .watch();
   }
 
+  /// Watch deleted notes
+  Stream<List<Note>> watchDeleted() {
+    return (select(notes)
+          ..where((n) => n.deletedAt.isNotNull())
+          ..orderBy([(n) => OrderingTerm.desc(n.deletedAt)]))
+        .watch();
+  }
+
   /// Insert a note
   Future<void> insertNote(NotesCompanion note) async {
     await into(notes).insertOnConflictUpdate(note);
@@ -77,6 +85,13 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   /// Permanently delete a note
   Future<void> permanentlyDeleteNote(String id) async {
     await (delete(notes)..where((n) => n.id.equals(id))).go();
+  }
+
+  /// Restore a deleted note
+  Future<void> restoreNote(String id) async {
+    await (update(notes)..where((n) => n.id.equals(id))).write(
+      const NotesCompanion(deletedAt: Value(null)),
+    );
   }
 
   /// Toggle favorite

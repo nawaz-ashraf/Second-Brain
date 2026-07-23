@@ -20,8 +20,11 @@ abstract class DocumentsRepository {
   });
   Future<void> update(DocumentModel doc);
   Future<void> delete(String id);
+  Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<List<DocumentModel>> search(String query);
+  Stream<List<DocumentModel>> watchDeleted();
 }
 
 class DocumentsRepositoryImpl implements DocumentsRepository {
@@ -109,6 +112,19 @@ class DocumentsRepositoryImpl implements DocumentsRepository {
 
   @override
   Future<void> delete(String id) => _dao.deleteDocument(id);
+
+  @override
+  Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteDocument(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreDocument(id);
+
+  @override
+  Stream<List<DocumentModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((docs) async {
+      return docs.map((d) => d.toModel()).toList();
+    });
+  }
 
   @override
   Future<void> toggleFavorite(String id, bool isFavorite) =>

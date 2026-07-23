@@ -17,7 +17,10 @@ abstract class CollectionsRepository {
   });
   Future<void> update(CollectionModel collection);
   Future<void> delete(String id);
+  Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<List<CollectionModel>> search(String query);
+  Stream<List<CollectionModel>> watchDeleted();
   Future<void> addItem(String collectionId, String itemId, String itemType);
   Future<void> removeItem(String collectionId, String itemId, String itemType);
   Future<bool> isInCollection(String collectionId, String itemId, String itemType);
@@ -93,6 +96,24 @@ class CollectionsRepositoryImpl implements CollectionsRepository {
 
   @override
   Future<void> delete(String id) => _dao.deleteCollection(id);
+
+  @override
+  Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteCollection(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreCollection(id);
+
+  @override
+  Stream<List<CollectionModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((collections) async {
+      final result = <CollectionModel>[];
+      for (final collection in collections) {
+        final count = await _dao.getItemCount(collection.id);
+        result.add(collection.toModel(itemCount: count));
+      }
+      return result;
+    });
+  }
 
   @override
   Future<List<CollectionModel>> search(String query) async {

@@ -11,13 +11,14 @@ class VoiceNotesDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<VoiceNote>> watchAll() {
     return (select(voiceNotes)
+          ..where((v) => v.deletedAt.isNull())
           ..orderBy([(v) => OrderingTerm.desc(v.updatedAt)]))
         .watch();
   }
 
   Stream<List<VoiceNote>> watchFavorites() {
     return (select(voiceNotes)
-          ..where((v) => v.isFavorite.equals(true))
+          ..where((v) => v.isFavorite.equals(true) & v.deletedAt.isNull())
           ..orderBy([(v) => OrderingTerm.desc(v.updatedAt)]))
         .watch();
   }
@@ -30,7 +31,7 @@ class VoiceNotesDao extends DatabaseAccessor<AppDatabase>
   Future<List<VoiceNote>> search(String query) {
     final q = '%$query%';
     return (select(voiceNotes)
-          ..where((v) => v.title.like(q))
+          ..where((v) => v.title.like(q) & v.deletedAt.isNull())
           ..orderBy([(v) => OrderingTerm.desc(v.updatedAt)]))
         .get();
   }
@@ -44,7 +45,26 @@ class VoiceNotesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> deleteVoiceNote(String id) async {
+    await (update(voiceNotes)..where((v) => v.id.equals(id))).write(
+      VoiceNotesCompanion(deletedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> permanentlyDeleteVoiceNote(String id) async {
     await (delete(voiceNotes)..where((v) => v.id.equals(id))).go();
+  }
+
+  Future<void> restoreVoiceNote(String id) async {
+    await (update(voiceNotes)..where((v) => v.id.equals(id))).write(
+      const VoiceNotesCompanion(deletedAt: Value(null)),
+    );
+  }
+
+  Stream<List<VoiceNote>> watchDeleted() {
+    return (select(voiceNotes)
+          ..where((v) => v.deletedAt.isNotNull())
+          ..orderBy([(v) => OrderingTerm.desc(v.deletedAt)]))
+        .watch();
   }
 
   Future<void> toggleFavorite(String id, bool isFavorite) async {

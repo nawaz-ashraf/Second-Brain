@@ -11,13 +11,14 @@ class BookmarksDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<Bookmark>> watchAll() {
     return (select(bookmarks)
+          ..where((b) => b.deletedAt.isNull())
           ..orderBy([(b) => OrderingTerm.desc(b.updatedAt)]))
         .watch();
   }
 
   Stream<List<Bookmark>> watchFavorites() {
     return (select(bookmarks)
-          ..where((b) => b.isFavorite.equals(true))
+          ..where((b) => b.isFavorite.equals(true) & b.deletedAt.isNull())
           ..orderBy([(b) => OrderingTerm.desc(b.updatedAt)]))
         .watch();
   }
@@ -31,7 +32,8 @@ class BookmarksDao extends DatabaseAccessor<AppDatabase>
     return (select(bookmarks)
           ..where(
             (b) =>
-                b.title.like(q) | b.url.like(q) | b.description.like(q),
+                (b.title.like(q) | b.url.like(q) | b.description.like(q)) &
+                b.deletedAt.isNull(),
           )
           ..orderBy([(b) => OrderingTerm.desc(b.updatedAt)]))
         .get();
@@ -46,7 +48,26 @@ class BookmarksDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> deleteBookmark(String id) async {
+    await (update(bookmarks)..where((b) => b.id.equals(id))).write(
+      BookmarksCompanion(deletedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> permanentlyDeleteBookmark(String id) async {
     await (delete(bookmarks)..where((b) => b.id.equals(id))).go();
+  }
+
+  Future<void> restoreBookmark(String id) async {
+    await (update(bookmarks)..where((b) => b.id.equals(id))).write(
+      const BookmarksCompanion(deletedAt: Value(null)),
+    );
+  }
+
+  Stream<List<Bookmark>> watchDeleted() {
+    return (select(bookmarks)
+          ..where((b) => b.deletedAt.isNotNull())
+          ..orderBy([(b) => OrderingTerm.desc(b.deletedAt)]))
+        .watch();
   }
 
   Future<void> toggleFavorite(String id, bool isFavorite) async {

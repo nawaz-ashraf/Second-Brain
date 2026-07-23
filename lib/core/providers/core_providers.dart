@@ -10,6 +10,7 @@ import '../repositories/voice_notes_repository.dart';
 import '../repositories/bookmarks_repository.dart';
 import '../repositories/collections_repository.dart';
 import '../repositories/tags_repository.dart';
+import '../services/app_lock_service.dart';
 
 // ─── Database Provider ────────────────────────────────────────────────────────
 
@@ -60,6 +61,11 @@ final tagsRepositoryProvider = Provider<TagsRepository>((ref) {
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('Initialize SharedPreferences before using');
+});
+
+final appLockServiceProvider = Provider<AppLockService>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return AppLockService(prefs);
 });
 
 // ─── Theme Mode Provider ──────────────────────────────────────────────────────

@@ -89,6 +89,7 @@ class DocumentModel {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   final List<TagModel> tags;
 
   const DocumentModel({
@@ -101,6 +102,7 @@ class DocumentModel {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.tags = const [],
   });
 
@@ -125,6 +127,7 @@ class DocumentModel {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     List<TagModel>? tags,
   }) {
     return DocumentModel(
@@ -137,6 +140,7 @@ class DocumentModel {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       tags: tags ?? this.tags,
     );
   }
@@ -153,6 +157,7 @@ class ImageModel {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   final List<TagModel> tags;
 
   const ImageModel({
@@ -165,6 +170,7 @@ class ImageModel {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.tags = const [],
   });
 
@@ -183,6 +189,7 @@ class ImageModel {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     List<TagModel>? tags,
   }) {
     return ImageModel(
@@ -195,6 +202,7 @@ class ImageModel {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       tags: tags ?? this.tags,
     );
   }
@@ -209,6 +217,7 @@ class VoiceNoteModel {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   final List<TagModel> tags;
 
   const VoiceNoteModel({
@@ -219,6 +228,7 @@ class VoiceNoteModel {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.tags = const [],
   });
 
@@ -237,6 +247,7 @@ class VoiceNoteModel {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     List<TagModel>? tags,
   }) {
     return VoiceNoteModel(
@@ -247,6 +258,7 @@ class VoiceNoteModel {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       tags: tags ?? this.tags,
     );
   }
@@ -263,6 +275,7 @@ class BookmarkModel {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
   final List<TagModel> tags;
 
   const BookmarkModel({
@@ -275,6 +288,7 @@ class BookmarkModel {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
     this.tags = const [],
   });
 
@@ -297,6 +311,7 @@ class BookmarkModel {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
     List<TagModel>? tags,
   }) {
     return BookmarkModel(
@@ -309,6 +324,7 @@ class BookmarkModel {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       tags: tags ?? this.tags,
     );
   }
@@ -324,6 +340,7 @@ class CollectionModel {
   final int itemCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
 
   const CollectionModel({
     required this.id,
@@ -334,6 +351,7 @@ class CollectionModel {
     this.itemCount = 0,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
   });
 
   Color get collectionColor => Color(color);
@@ -347,6 +365,7 @@ class CollectionModel {
     int? itemCount,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
   }) {
     return CollectionModel(
       id: id ?? this.id,
@@ -357,6 +376,7 @@ class CollectionModel {
       itemCount: itemCount ?? this.itemCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 }
@@ -423,5 +443,22 @@ class SearchResult {
     required this.type,
     required this.isFavorite,
     required this.updatedAt,
+  });
+}
+
+/// Unified trash item model
+class TrashItem {
+  final String id;
+  final String title;
+  final String? subtitle;
+  final ItemType type;
+  final DateTime deletedAt;
+
+  const TrashItem({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    required this.type,
+    required this.deletedAt,
   });
 }

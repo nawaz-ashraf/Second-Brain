@@ -11,13 +11,14 @@ class DocumentsDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<Document>> watchAll() {
     return (select(documents)
+          ..where((d) => d.deletedAt.isNull())
           ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
         .watch();
   }
 
   Stream<List<Document>> watchFavorites() {
     return (select(documents)
-          ..where((d) => d.isFavorite.equals(true))
+          ..where((d) => d.isFavorite.equals(true) & d.deletedAt.isNull())
           ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
         .watch();
   }
@@ -29,7 +30,7 @@ class DocumentsDao extends DatabaseAccessor<AppDatabase>
   Future<List<Document>> search(String query) {
     final q = '%$query%';
     return (select(documents)
-          ..where((d) => d.title.like(q) | d.fileName.like(q))
+          ..where((d) => (d.title.like(q) | d.fileName.like(q)) & d.deletedAt.isNull())
           ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
         .get();
   }
@@ -43,7 +44,26 @@ class DocumentsDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> deleteDocument(String id) async {
+    await (update(documents)..where((d) => d.id.equals(id))).write(
+      DocumentsCompanion(deletedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> permanentlyDeleteDocument(String id) async {
     await (delete(documents)..where((d) => d.id.equals(id))).go();
+  }
+
+  Future<void> restoreDocument(String id) async {
+    await (update(documents)..where((d) => d.id.equals(id))).write(
+      const DocumentsCompanion(deletedAt: Value(null)),
+    );
+  }
+
+  Stream<List<Document>> watchDeleted() {
+    return (select(documents)
+          ..where((d) => d.deletedAt.isNotNull())
+          ..orderBy([(d) => OrderingTerm.desc(d.deletedAt)]))
+        .watch();
   }
 
   Future<void> toggleFavorite(String id, bool isFavorite) async {

@@ -14,6 +14,8 @@ import '../../features/collections/presentation/screens/collection_detail_screen
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/favorites/presentation/screens/favorites_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/settings/presentation/screens/trash_screen.dart';
+import '../../features/settings/presentation/screens/legal_document_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
 /// Route names
@@ -34,6 +36,9 @@ class AppRoutes {
   static const String search = '/search';
   static const String favorites = '/favorites';
   static const String settings = '/settings';
+  static const String trash = '/trash';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String termsOfService = '/terms-of-service';
 }
 
 /// Global go_router configuration
@@ -162,6 +167,33 @@ final appRouter = GoRouter(
           CollectionDetailScreen(collectionId: collectionId),
         );
       },
+    ),
+    GoRoute(
+      path: AppRoutes.trash,
+      pageBuilder: (context, state) => _slidePage(
+        state,
+        const TrashScreen(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.privacyPolicy,
+      pageBuilder: (context, state) => _slidePage(
+        state,
+        const LegalDocumentScreen(
+          title: 'Privacy Policy',
+          content: privacyPolicyContent,
+        ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.termsOfService,
+      pageBuilder: (context, state) => _slidePage(
+        state,
+        const LegalDocumentScreen(
+          title: 'Terms of Service',
+          content: termsOfServiceContent,
+        ),
+      ),
     ),
   ],
 );

@@ -11,6 +11,7 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<Collection>> watchAll() {
     return (select(collections)
+          ..where((c) => c.deletedAt.isNull())
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .watch();
   }
@@ -23,7 +24,7 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
   Future<List<Collection>> search(String query) {
     final q = '%$query%';
     return (select(collections)
-          ..where((c) => c.name.like(q) | c.description.like(q)))
+          ..where((c) => (c.name.like(q) | c.description.like(q)) & c.deletedAt.isNull()))
         .get();
   }
 
@@ -36,10 +37,29 @@ class CollectionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> deleteCollection(String id) async {
+    await (update(collections)..where((c) => c.id.equals(id))).write(
+      CollectionsCompanion(deletedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> permanentlyDeleteCollection(String id) async {
     await (delete(collections)..where((c) => c.id.equals(id))).go();
     await (delete(collectionItems)
           ..where((ci) => ci.collectionId.equals(id)))
         .go();
+  }
+
+  Future<void> restoreCollection(String id) async {
+    await (update(collections)..where((c) => c.id.equals(id))).write(
+      const CollectionsCompanion(deletedAt: Value(null)),
+    );
+  }
+
+  Stream<List<Collection>> watchDeleted() {
+    return (select(collections)
+          ..where((c) => c.deletedAt.isNotNull())
+          ..orderBy([(c) => OrderingTerm.desc(c.deletedAt)]))
+        .watch();
   }
 
   // ─── Collection Items ────────────────────────────────────────────────────

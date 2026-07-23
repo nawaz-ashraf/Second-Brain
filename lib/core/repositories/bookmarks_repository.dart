@@ -20,8 +20,11 @@ abstract class BookmarksRepository {
   });
   Future<void> update(BookmarkModel bookmark);
   Future<void> delete(String id);
+  Future<void> permanentlyDelete(String id);
+  Future<void> restore(String id);
   Future<void> toggleFavorite(String id, bool isFavorite);
   Future<List<BookmarkModel>> search(String query);
+  Stream<List<BookmarkModel>> watchDeleted();
 }
 
 class BookmarksRepositoryImpl implements BookmarksRepository {
@@ -109,6 +112,19 @@ class BookmarksRepositoryImpl implements BookmarksRepository {
 
   @override
   Future<void> delete(String id) => _dao.deleteBookmark(id);
+
+  @override
+  Future<void> permanentlyDelete(String id) => _dao.permanentlyDeleteBookmark(id);
+
+  @override
+  Future<void> restore(String id) => _dao.restoreBookmark(id);
+
+  @override
+  Stream<List<BookmarkModel>> watchDeleted() {
+    return _dao.watchDeleted().asyncMap((bookmarks) async {
+      return bookmarks.map((b) => b.toModel()).toList();
+    });
+  }
 
   @override
   Future<void> toggleFavorite(String id, bool isFavorite) =>
